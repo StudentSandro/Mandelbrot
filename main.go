@@ -19,8 +19,8 @@ package main
 
 import (
 	"github.com/hajimehoshi/ebiten"
-	"log"
 	"math"
+	"time"
 )
 
 const (
@@ -32,6 +32,8 @@ const (
 var (
 	palette [maxIt]byte
 )
+
+var PixelList []Pixel
 
 type Pixel struct {
 	X  float64
@@ -76,22 +78,27 @@ func NewGame() *Game {
 
 func (gm *Game) updateOffscreen() {
 	//TODO Funktion auslagern zum Bloecke bilden
-	var PixelList []Pixel
-	PixelC := make()
-	for y := 0; y < screenHeight; y++ {
-		for x := 0; x < screenHeight; x++ {
 
-			it := CalcPixel(x, y)
-
-			PixelList = append(PixelList, Pixel{X: float64(x), Y: float64(y), It: it})
-
-			r, g, b := color(it)
-			p := 4 * (x + y*screenWidth)
-			gm.offscreenPix[p] = r
-			gm.offscreenPix[p+1] = g
-			gm.offscreenPix[p+2] = b
-			gm.offscreenPix[p+3] = 0xff
+	for i := 0; i >= 10; i++ {
+		for j := 0; j >= 10; j++ {
+			xStart := (screenWidth / 10) * i
+			xEnd := (screenWidth / 10) * (i + 1)
+			yStart := (screenHeight / 10) * i
+			yEnd := (screenHeight / 10) * (i + 1)
+			go CalcBlock(xStart, xEnd, yStart, yEnd)
 		}
+	}
+
+	time.Sleep(time.Second * 3)
+
+	for k := 0; k < len(PixelList); k++ {
+		Pixel{}
+		r, g, b := color(PixelList.Pix)
+		p := 4 * (x + y*screenWidth)
+		gm.offscreenPix[p] = r
+		gm.offscreenPix[p+1] = g
+		gm.offscreenPix[p+2] = b
+		gm.offscreenPix[p+3] = 0xff
 	}
 	gm.offscreen.ReplacePixels(gm.offscreenPix)
 }
@@ -108,18 +115,15 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return screenWidth, screenHeight
 }
 
-/*
-func CalcBlock(xStart, xEnd, yStart, yEnd) []Pixel {
+func CalcBlock(xStart int, xEnd int, yStart int, yEnd int) {
 	var PixelBlock []Pixel
 	for y := yStart; y < yEnd; y++ {
 		for x := xStart; x < xEnd; x++ {
-			it := CalcPixel(x,y)
-			PixelBlock = append(PixelBlock, Pixel{X:float64(x), Y:float64(y), It:it})
+			it := CalcPixel(x, y)
+			PixelList := append(PixelList, Pixel{X: float64(x), Y: float64(y), It: it})
 		}
 	}
-	return PixelBlock
 }
-*/
 
 func CalcPixel(i, j int) int {
 	x := float64(i)*Zoom/screenWidth - Zoom/2 + OffsetX
