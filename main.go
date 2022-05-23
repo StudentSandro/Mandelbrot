@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	screenWidth  = 1080
-	screenHeight = 1080
+	screenWidth  = 640
+	screenHeight = 640
 	maxIt        = 128
 )
 
@@ -80,20 +80,21 @@ func NewGame() *Game {
 func (gm *Game) updateOffscreen() {
 	//TODO Funktion auslagern zum Bloecke bilden
 
-	for i := 0; i >= 10; i++ {
-		for j := 0; j >= 10; j++ {
+	for i := 0; i <= 9; i++ {
+		for j := 0; j <= 9; j++ {
 			xStart := (screenWidth / 10) * i
 			xEnd := (screenWidth / 10) * (i + 1)
-			yStart := (screenHeight / 10) * i
-			yEnd := (screenHeight / 10) * (i + 1)
+			yStart := (screenHeight / 10) * j
+			yEnd := (screenHeight / 10) * (j + 1)
 			go CalcBlock(xStart, xEnd, yStart, yEnd)
+			print(xStart, ",", xEnd, ",", yStart, ",", yEnd, "\n")
 		}
 	}
 
 	time.Sleep(time.Second * 3)
-
+	print(len(PixelList))
 	for k := 0; k < len(PixelList); k++ {
-		print("test")
+
 		r, g, b := color(PixelList[k].It)
 		p := 4 * (int(PixelList[k].X) + int(PixelList[k].Y)*screenWidth)
 		gm.offscreenPix[p] = r
