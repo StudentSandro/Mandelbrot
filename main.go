@@ -19,6 +19,7 @@ package main
 
 import (
 	"github.com/hajimehoshi/ebiten"
+	"log"
 	"math"
 	"time"
 )
@@ -92,9 +93,9 @@ func (gm *Game) updateOffscreen() {
 	time.Sleep(time.Second * 3)
 
 	for k := 0; k < len(PixelList); k++ {
-		Pixel{}
-		r, g, b := color(PixelList.Pix)
-		p := 4 * (x + y*screenWidth)
+		print("test")
+		r, g, b := color(PixelList[k].It)
+		p := 4 * (int(PixelList[k].X) + int(PixelList[k].Y)*screenWidth)
 		gm.offscreenPix[p] = r
 		gm.offscreenPix[p+1] = g
 		gm.offscreenPix[p+2] = b
@@ -116,11 +117,11 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func CalcBlock(xStart int, xEnd int, yStart int, yEnd int) {
-	var PixelBlock []Pixel
+	//var PixelBlock []Pixel
 	for y := yStart; y < yEnd; y++ {
 		for x := xStart; x < xEnd; x++ {
 			it := CalcPixel(x, y)
-			PixelList := append(PixelList, Pixel{X: float64(x), Y: float64(y), It: it})
+			PixelList = append(PixelList, Pixel{X: float64(x), Y: float64(y), It: it})
 		}
 	}
 }
