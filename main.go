@@ -21,13 +21,12 @@ import (
 	"github.com/hajimehoshi/ebiten"
 	"log"
 	"math"
-	"time"
 )
 
 const (
 	screenWidth  = 640
 	screenHeight = 640
-	maxIt        = 128
+	maxIt        = 255
 )
 
 var (
@@ -41,6 +40,8 @@ type Pixel struct {
 	Y  float64
 	It int
 }
+
+var PixelChan = make(chan Pixel)
 
 //Offset
 var OffsetX float64 = -0.75
@@ -78,31 +79,29 @@ func NewGame() *Game {
 }
 
 func (gm *Game) updateOffscreen() {
-	//TODO Funktion auslagern zum Bloecke bilden
-
+	ChanCounter := 0
 	for i := 0; i <= 9; i++ {
 		for j := 0; j <= 9; j++ {
 			xStart := (screenWidth / 10) * i
 			xEnd := (screenWidth / 10) * (i + 1)
 			yStart := (screenHeight / 10) * j
 			yEnd := (screenHeight / 10) * (j + 1)
-			go CalcBlock(xStart, xEnd, yStart, yEnd)
-			print(xStart, ",", xEnd, ",", yStart, ",", yEnd, "\n")
+			go CalcBlock(xStart, xEnd, yStart, yEnd)                        //startet funktion um Pixel Blöcke zu berrechen, rückgabe per channel
+			ChanCounter = ChanCounter + ((xEnd - xStart) * (yEnd - yStart)) //Dient als Counter damit klar ist wie viel rückgaben im channel erwartet werden
 		}
 	}
 
-	time.Sleep(time.Second * 3)
-	print(len(PixelList))
-	for k := 0; k < len(PixelList); k++ {
-
-		r, g, b := color(PixelList[k].It)
-		p := 4 * (int(PixelList[k].X) + int(PixelList[k].Y)*screenWidth)
+	for c := ChanCounter; c > 0; c-- { //holt Pixel aus channel und fügt sie dem offscreen zu
+		Pixel := <-PixelChan
+		r, g, b := color(Pixel.It)
+		p := 4 * (int(Pixel.X) + int(Pixel.Y)*screenWidth)
 		gm.offscreenPix[p] = r
 		gm.offscreenPix[p+1] = g
 		gm.offscreenPix[p+2] = b
 		gm.offscreenPix[p+3] = 0xff
 	}
 	gm.offscreen.ReplacePixels(gm.offscreenPix)
+
 }
 
 func (g *Game) Update() error {
@@ -118,11 +117,10 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func CalcBlock(xStart int, xEnd int, yStart int, yEnd int) {
-	//var PixelBlock []Pixel
 	for y := yStart; y < yEnd; y++ {
 		for x := xStart; x < xEnd; x++ {
 			it := CalcPixel(x, y)
-			PixelList = append(PixelList, Pixel{X: float64(x), Y: float64(y), It: it})
+			PixelChan <- Pixel{X: float64(x), Y: float64(y), It: it}
 		}
 	}
 }
