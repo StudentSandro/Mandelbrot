@@ -105,6 +105,14 @@ func (gm *Game) updateOffscreen() {
 }
 
 func (g *Game) Update() error {
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		x, y := ebiten.CursorPosition()
+		OffsetX = float64(x) / 1000
+		OffsetY = float64(y)
+		Zoom -= 0.1
+		g.updateOffscreen()
+	}
+	println(ebiten.CursorPosition())
 	return nil
 }
 
