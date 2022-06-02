@@ -46,7 +46,8 @@ var PixelChan = make(chan Pixel)
 //Offset
 var OffsetX float64 = -0.75
 var OffsetY float64 = 0.25
-var Zoom float64 = 2
+var Zoom float64 = 3
+var MaxGoRoutine int = 10
 
 func init() {
 	for i := range palette {
@@ -80,12 +81,12 @@ func NewGame() *Game {
 
 func (gm *Game) updateOffscreen() {
 	ChanCounter := 0
-	for i := 0; i <= 9; i++ {
-		for j := 0; j <= 9; j++ {
-			xStart := (screenWidth / 10) * i
-			xEnd := (screenWidth / 10) * (i + 1)
-			yStart := (screenHeight / 10) * j
-			yEnd := (screenHeight / 10) * (j + 1)
+	for i := 0; i < MaxGoRoutine; i++ {
+		for j := 0; j < MaxGoRoutine; j++ {
+			xStart := (screenWidth / MaxGoRoutine) * i
+			xEnd := (screenWidth / MaxGoRoutine) * (i + 1)
+			yStart := (screenHeight / MaxGoRoutine) * j
+			yEnd := (screenHeight / MaxGoRoutine) * (j + 1)
 			go CalcBlock(xStart, xEnd, yStart, yEnd)                        //startet funktion um Pixel Blöcke zu berrechen, rückgabe per channel
 			ChanCounter = ChanCounter + ((xEnd - xStart) * (yEnd - yStart)) //Dient als Counter damit klar ist wie viel rückgaben im channel erwartet werden
 		}
@@ -107,12 +108,19 @@ func (gm *Game) updateOffscreen() {
 func (g *Game) Update() error {
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 		x, y := ebiten.CursorPosition()
-		OffsetX = float64(x) / 1000
-		OffsetY = float64(y)
-		Zoom -= 0.1
+		OffsetX = float64((x - (screenWidth / 2.0)) / 250.0)
+		OffsetY = float64((y - (screenHeight / 2.0)) / 250.0 * (-1))
+		//Zoom *= 0.9
 		g.updateOffscreen()
 	}
-	println(ebiten.CursorPosition())
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
+		/*x, y := ebiten.CursorPosition()
+		OffsetX = float64(x) / 1000
+		OffsetY = float64(y) / 1000*/
+		Zoom /= 0.9
+		g.updateOffscreen()
+	}
+	println(int(OffsetX), int(OffsetY))
 	return nil
 }
 
