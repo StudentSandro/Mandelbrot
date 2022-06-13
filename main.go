@@ -26,28 +26,28 @@ import (
 const (
 	screenWidth  = 640
 	screenHeight = 640
-	maxIt        = 255
+	maxIt        = 128
+	MaxGoRoutine = 10
 )
 
 var (
 	palette [maxIt]byte
 )
 
-var PixelList []Pixel
-
+//einzelnen Pixel mit x, y und farbtiefe
 type Pixel struct {
-	X  float64
-	Y  float64
+	X  int
+	Y  int
 	It int
 }
 
+//Channel für Pixel
 var PixelChan = make(chan Pixel)
 
-//Offset
+//Offset Mandelbrot (steuert Position und Zoom)
 var OffsetX float64 = -0.75
 var OffsetY float64 = 0.25
 var Zoom float64 = 3
-var MaxGoRoutine int = 10
 
 func init() {
 	for i := range palette {
@@ -57,10 +57,10 @@ func init() {
 
 func color(it int) (r, g, b byte) {
 	if it == maxIt {
-		return 0xff, 0xff, 0xff
+		return 0x00, 0xaf, 0xff //Standartfarbe ab maxIt Wert
 	}
 	c := palette[it]
-	return c, c, c
+	return 0, c / 2, c //färbt Mandelbrot blau ein
 }
 
 type Game struct {
@@ -73,22 +73,21 @@ func NewGame() *Game {
 		offscreen:    ebiten.NewImage(screenWidth, screenHeight),
 		offscreenPix: make([]byte, screenWidth*screenHeight*4),
 	}
-	// Now it is not feasible to call updateOffscreen every frame due to performance.
-	g.updateOffscreen() //Todo start update
+	//führt bei Start erstes mal Mandelbrot Berechnung durch
+	g.updateOffscreen()
 
 	return g
 }
 
 func (gm *Game) updateOffscreen() {
-	ChanCounter := 0
+	ChanCounter := screenWidth * screenHeight //damit bekannt ist wie viele Pixel im Channel erwartet werden
 	for i := 0; i < MaxGoRoutine; i++ {
 		for j := 0; j < MaxGoRoutine; j++ {
 			xStart := (screenWidth / MaxGoRoutine) * i
 			xEnd := (screenWidth / MaxGoRoutine) * (i + 1)
 			yStart := (screenHeight / MaxGoRoutine) * j
 			yEnd := (screenHeight / MaxGoRoutine) * (j + 1)
-			go CalcBlock(xStart, xEnd, yStart, yEnd)                        //startet funktion um Pixel Blöcke zu berrechen, rückgabe per channel
-			ChanCounter = ChanCounter + ((xEnd - xStart) * (yEnd - yStart)) //Dient als Counter damit klar ist wie viel rückgaben im channel erwartet werden
+			go CalcBlock(xStart, xEnd, yStart, yEnd) //startet funktion um Pixel Blöcke zu berrechen, rückgabe per channel
 		}
 	}
 
@@ -101,26 +100,41 @@ func (gm *Game) updateOffscreen() {
 		gm.offscreenPix[p+2] = b
 		gm.offscreenPix[p+3] = 0xff
 	}
-	gm.offscreen.ReplacePixels(gm.offscreenPix)
+	gm.offscreen.ReplacePixels(gm.offscreenPix) //Zeichnet anschliessend das Mandelbrot neu anhand der offscreenPixel
 
 }
 
 func (g *Game) Update() error {
+	// Zoom hinein
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		x, y := ebiten.CursorPosition()
-		OffsetX = float64((x - (screenWidth / 2.0)) / 250.0)
-		OffsetY = float64((y - (screenHeight / 2.0)) / 250.0 * (-1))
-		//Zoom *= 0.9
+		Zoom *= 0.9
 		g.updateOffscreen()
 	}
+	//Zoom hinaus
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
-		/*x, y := ebiten.CursorPosition()
-		OffsetX = float64(x) / 1000
-		OffsetY = float64(y) / 1000*/
 		Zoom /= 0.9
 		g.updateOffscreen()
 	}
-	println(int(OffsetX), int(OffsetY))
+	//Kamera geht hoch
+	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
+		OffsetY += 0.05 * Zoom
+		g.updateOffscreen()
+	}
+	//Kamera geht runter
+	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
+		OffsetY -= 0.05 * Zoom
+		g.updateOffscreen()
+	}
+	//Kamera geht nach links
+	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
+		OffsetX -= 0.05 * Zoom
+		g.updateOffscreen()
+	}
+	//Kamera geht nach rechts
+	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
+		OffsetX += 0.05 * Zoom
+		g.updateOffscreen()
+	}
 	return nil
 }
 
@@ -132,15 +146,17 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return screenWidth, screenHeight
 }
 
+//Berrechnet Teil Blöcke des Mandelbrots
 func CalcBlock(xStart int, xEnd int, yStart int, yEnd int) {
 	for y := yStart; y < yEnd; y++ {
 		for x := xStart; x < xEnd; x++ {
 			it := CalcPixel(x, y)
-			PixelChan <- Pixel{X: float64(x), Y: float64(y), It: it}
+			PixelChan <- Pixel{X: x, Y: y, It: it}
 		}
 	}
 }
 
+//Funktion zum berechnen der einzelnen Pixel mit der Mandelbrotformel
 func CalcPixel(i, j int) int {
 	x := float64(i)*Zoom/screenWidth - Zoom/2 + OffsetX
 	y := (screenHeight-float64(j))*Zoom/screenHeight - Zoom/2 + OffsetY
@@ -158,7 +174,7 @@ func CalcPixel(i, j int) int {
 
 func main() {
 	ebiten.SetWindowSize(screenWidth, screenHeight)
-	ebiten.SetWindowTitle("Mandelbrot (Ebiten Demo)")
+	ebiten.SetWindowTitle("Mandelbrot by Patrick Rizzo / Sandro Zogg")
 	if err := ebiten.RunGame(NewGame()); err != nil {
 		log.Fatal(err)
 	}
