@@ -26,8 +26,8 @@ import (
 const (
 	screenWidth  = 640
 	screenHeight = 640
-	maxIt        = 128
 	MaxGoRoutine = 10
+	maxIt        = 256
 )
 
 var (
@@ -48,6 +48,7 @@ var PixelChan = make(chan Pixel)
 var OffsetX float64 = -0.75
 var OffsetY float64 = 0.25
 var Zoom float64 = 3
+var sharp int = 128
 
 func init() {
 	for i := range palette {
@@ -56,7 +57,7 @@ func init() {
 }
 
 func color(it int) (r, g, b byte) {
-	if it == maxIt {
+	if it == sharp {
 		return 0x00, 0xaf, 0xff //Standartfarbe ab maxIt Wert
 	}
 	c := palette[it]
@@ -135,6 +136,22 @@ func (g *Game) Update() error {
 		OffsetX += 0.05 * Zoom
 		g.updateOffscreen()
 	}
+
+	//zum unscharf stellen
+	if ebiten.IsKeyPressed(ebiten.KeyY) {
+		if !(sharp >= maxIt) {
+			sharp += 1
+		}
+		g.updateOffscreen()
+	}
+
+	//zum scharf stellen
+	if ebiten.IsKeyPressed(ebiten.KeyU) {
+		if !(sharp <= 0) {
+			sharp -= 1
+		}
+		g.updateOffscreen()
+	}
 	return nil
 }
 
@@ -163,7 +180,7 @@ func CalcPixel(i, j int) int {
 	c := complex(x, y)
 	z := complex(0, 0)
 	it := 0
-	for ; it < maxIt; it++ {
+	for ; it < sharp; it++ {
 		z = z*z + c
 		if real(z)*real(z)+imag(z)*imag(z) > 4 {
 			break
